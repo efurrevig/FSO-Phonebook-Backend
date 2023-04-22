@@ -1,57 +1,41 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const cors = require('cors')
+const Person = require('./models/person')
 
 app.use(express.json())
 app.use(express.static('build'))
 app.use(cors())
 
-let persons = [
-    {
-        "name": "Mary Poppendieck",
-        "number": "39-23-6423122",
-        "id": 4
-      },
-      {
-        "name": "Eric Furrevig",
-        "number": "2012483723",
-        "id": 5
-      },
-      {
-        "name": "Mochi",
-        "number": "12312321312313",
-        "id": 6
-      }
-]
-
-const generateId = () => {
-    const maxId = persons.length > 0
-        ? Math.max(...persons.map(n => n.id))
-        : 0
-    return maxId + 1
-}
 
 app.get('/', (request, response) => {
     response.send('<h1>Hello World!</h1>')
 })
 
-//all notes
+//all persons
 app.get('/api/persons', (request, response) => {
-    response.json(persons)
+    Person.find({}).then(persons => {
+        response.json(persons)
+    })
 })
 
-//individual notes
+//individual persons
 app.get('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const person = persons.find(person => person.id === id)
-    if (person) {
-        response.json(person)
-    } else {
-        response.status(404).end()
-    }
+    Person.findById(request.params.id).then(person => {
+        if (person) {
+            response.json(person)
+        } else {
+            response.status(404).end()
+        }
+    })
+    .catch(error => {
+        console.log(error)
+        response.status(500).end()
+    })
 })
 
-//delete notes
+//delete persons
 app.delete('/api/persons/:id', (request, response) => {
     const id = Number(request.params.id)
     persons = persons.filter(person => person.id !== id)
@@ -59,7 +43,7 @@ app.delete('/api/persons/:id', (request, response) => {
     response.status(204).end()
 })
 
-//add notes
+//add persons
 app.post('/api/persons', (request, response) => {
     const body = request.body
 
@@ -69,15 +53,15 @@ app.post('/api/persons', (request, response) => {
         })
     }
 
-    const person = {
+    const person = new Person ({
         name: body.name,
-        number: body.number,
-        id: generateId(),
-    }
+        number: body.number
+    })
 
-    persons = persons.concat(person)
+    person.save().then(savedPerson => {
+        response.json(savedPerson)
+    })
 
-    response.json(person)
 })
 
 const PORT = process.env.PORT || 3001
