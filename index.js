@@ -14,32 +14,15 @@ app.get('/', (request, response) => {
     response.send('<h1>Hello World!</h1>')
 })
 
-//all persons
+//get all persons
 app.get('/api/persons', (request, response) => {
     Person.find({}).then(persons => {
         response.json(persons)
     })
 })
 
-const unknownEndpoint = (request, response) => {
-    response.status(404).send({ error: 'unknown endpoint' })
-}
 
-app.use(unknownEndpoint)
-
-const errorHandler = (error, request, response, next) => {
-    console.error(error.message)
-  
-    if (error.name === 'CastError') {
-      return response.status(400).send({ error: 'malformatted id' })
-    } 
-  
-    next(error)
-  }
-  
-app.use(errorHandler)
-
-//individual persons
+//get individual persons
 app.get('/api/persons/:id', (request, response, next) => {
     Person.findById(request.params.id).then(person => {
         if (person) {
@@ -53,10 +36,11 @@ app.get('/api/persons/:id', (request, response, next) => {
 
 //delete persons
 app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    persons = persons.filter(person => person.id !== id)
-
-    response.status(204).end()
+    Person.findByIdAndRemove(request.params.id)
+        .then(result => {
+            response.status(204).end()
+        })
+        .catch(error => next(error))
 })
 
 //add persons
@@ -79,6 +63,40 @@ app.post('/api/persons', (request, response) => {
     })
 
 })
+
+//edit persons
+app.put('/api/persons/:id', (request, response, next) => {
+    const body = request.body
+
+    const person = {
+        name: body.name,
+        number: body.number,
+    }
+
+    Person.findByIdAndUpdate(request.params.id, person, {new: true})
+        .then(newPerson => {
+            response.json(newPerson)
+        })
+        .catch(error => next(error))
+})
+
+const unknownEndpoint = (request, response) => {
+    response.status(404).send({ error: 'unknown endpoint' })
+}
+
+app.use(unknownEndpoint)
+
+const errorHandler = (error, request, response, next) => {
+    console.error(error.message)
+  
+    if (error.name === 'CastError') {
+      return response.status(400).send({ error: 'malformatted id' })
+    } 
+  
+    next(error)
+  }
+  
+app.use(errorHandler)
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
